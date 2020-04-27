@@ -1,0 +1,315 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<boco>
+	<!-- 省份代码 -->
+		<provinceCode>FJ</provinceCode>
+	<!-- 集客投诉工单数据查询 -->
+		<!-- 存放到电子运维系统中的生成文件的绝对路径配置 -->
+	  <csvFile>/opt/IBM/attachment/accessories/uploadfile/accessoriesftp/centralcommonfault</csvFile>
+	<FJ>
+		<!-- Ftp配置 上传到诺西性能平台 -->
+		<url>10.48.190.2</url>
+		<port>21</port>
+		<username>ftpuser</username>
+		<password>Xn20_Cm!e5_qcQ9</password>
+		<path>/jkorder</path>
+		<!-- 文件首行,第一行的英文拼接 -->
+		<headers>
+			chargeName,chargePhone,province_name,city_name,faultOrderId,orderTheme,customerId,customerName,customerLev,customerLevId,customerType,customerTypeId,busType,busTypeId,proId,circuitName,assuranceLev,assuranceLevId,alarmId,alarmNet,alarmEquipmentId,alarmEquipmentCompany,alarmEquipmentType,alarmName,alarmType,alarmDetail,alarmStartTime,orderStartTime,limitTime,orderEndTime,faultResult,faultResultId,orderState,orderStateId,isContactCustomer,contactCustomerFirstTime,pretreatmentTime,preanalysisReason,preanalysisReasonId,isSucPreanalysis,taskTransferTime,maintenanceCompany,maintenanceStartTime,maintenanceDetail,maintenanceResult,maintenanceResultId,isvisite,arriveSceneTime,removeAlarmTime,recoFaultTime,faulteChargeableCityName,isoverTime,overTimeResion,problemResion,isConfirmResult,qcResult,qcDetail,faultType,faultTypeId,accessWay,enterpriseId,serviceId,isVolumeFault,terminalType,calledNumberCityName,ecsiType,accgateIp,accgateId,mpiagSendMegTime,isSusResponse,mpiagResReportTime,isSucResReport,apnName,tunnelType,vpnInstantiation,ceIp,customerIp,ScopeServInf,
+		</headers>
+		<!-- 故障分类字典值根据现场进行配置二级字典-->
+		<sql>
+			select    f_get_areaname(m.mainFaultGenerantPriv) as province_name,
+                --f_get_areaname(m.mainFaultGenerantCity) as city_name,
+                decode(f_get_areaname(m.mainFaultGenerantCity),
+                       '福州','福州',
+                       '莆田','莆田',
+                       '厦门','厦门',
+                       '三明','三明',
+                       '南平','南平',
+                       '宁德','宁德',
+                       '泉州','泉州',
+                       '漳州','漳州',
+                       '龙岩','龙岩',
+                       '福州') as city_name,
+                m.sheetid as faultOrderId,
+                m.title as orderTheme,
+                m.Maingcssclient as customerId,
+                m.maingcssClientName as customerName,
+                m.mainCustomerLevel as customerLev,
+                m.mainCustomerLevel as customerLevId,
+                decode(substr(MAINGROUPCUSTOMNAME,0,decode(instr(MAINGROUPCUSTOMNAME,',',1),0,length(MAINGROUPCUSTOMNAME),(instr(MAINGROUPCUSTOMNAME,',',1)-1))),
+                                '党政军','党政军',
+                                '教育机构','教育',
+                                '金融机构','金融',
+                                '大企业','工业和能源',
+                                '事业单位','互联网',
+                                '中小企业','农商',
+                                '聚类客户','农商',
+                                '农商'
+                ) as customerType,
+                decode(substr(MAINGROUPCUSTOMNAME,0,decode(instr(MAINGROUPCUSTOMNAME,',',1),0,length(MAINGROUPCUSTOMNAME),(instr(MAINGROUPCUSTOMNAME,',',1)-1))),
+                                '党政军','1',
+                                '教育机构','3',
+                                '金融机构','2',
+                                '大企业','4',
+                                '事业单位','5',
+                                '中小企业','6',
+                                '聚类客户','7',
+                                '7'
+                ) as customerTypeId,
+                
+                decode(substr(m.mainProductType,1,9),
+                '101031001','数据专线',
+                '101031013','数据专线',
+                '101031014','MPLS VPN',
+                '101031003','语音专线',
+                '101031004','短彩信', 
+                '101031005','短彩信',
+                '互联网专线') as busType,
+                decode(substr(m.mainProductType,1,9),'101031001','3','101031013','3','101031014','4',
+                '101031003','2','101031004','6',  '101031005','6','1')as busTypeId,
+                
+                m.mainProductIdentify as proId,
+                m.maincircuitNo as circuitName,
+                --nvl(m.mainServiceLevel,'101031305') as assuranceLev,
+                decode(nvl(m.mainServiceLevel,'101031305'),
+                '101031301','AAA',
+			          '101031303','AA',
+			          '101031304','A',
+			          '101031305','普通'
+                ) as assuranceLev,
+                --nvl(m.mainServiceLevel,'101031305') as assuranceLevId,
+                 decode(nvl(m.mainServiceLevel,'101031305'),
+                '101031301','1',
+			          '101031303','2',
+			          '101031304','3',
+			          '101031305','4'
+                ) as assuranceLevId,
+                m.mainAlarmId as alarmId,
+                m.mainNetName as alarmNet,
+                m.mainEquipmentType as alarmEquipmentId,
+                m.mainEquipmentFactory as alarmEquipmentCompany,
+                '' as alarmEquipmentType,
+                substr(title,instr(title,'上报',1)+2) as alarmName,
+                m.mainAlarmLevel as alarmType,
+                m.mainAlarmDesc as alarmDetail,
+                m.mainFaultGenerantTime as AlarmStartTime,
+                m.sendTime as orderStartTime,
+                m.sheetCompleteLimit as limitTime,
+                m.endTime as orderEndTime,
+                central_get_shoujiview(m.id, 'finalDealResult') as faultResult,
+                central_get_shoujiview(m.id, 'finalDealResult') as faultResultId,
+                --decode(m.status, 1, 6, 3) as orderState,
+                --decode(m.status, 1, 6, 3) as orderStateId,
+                nvl(f_get_central_orderstatus(id),'处理中') as orderState,
+                nvl(f_get_central_orderstatusid(id),'3') as orderStateId,
+                '' as isContactCustomer,
+                '' as contactCustomerFirstTime,
+                '' as pretreatmentTime,
+                '' as preanalysisReason,
+                '' as preanalysisReasonId,
+                '' as isSucPreanalysis,
+                to_date(central_get_shoujiview(m.id, 'T1toT2TransTime'),'YYYY-MM-DD HH24:MI:SS') as taskTransferTime,
+                m.mainThirdCompany as maintenanceCompany,
+                '' as maintenanceStartTime,
+                '' as maintenanceDetail,
+                '' as maintenanceResult,
+                '' as maintenanceResultId,
+                '' as isvisite,
+                nvl2(central_get_shoujiview(m.id, 'linkReachTime'),to_date(central_get_shoujiview(m.id, 'linkReachTime'),'YYYY-MM-DD HH24:MI:SS'),'') as arriveSceneTime,
+                m.mainAlarmSolveDate as removeAlarmTime,
+                to_date(f_get_groupsheet_datatype(m.id,'LINKFAULTAVOIDTIME'),'yyyy-mm-dd hh24:mi:ss') as recoFaultTime,
+                m.mainFaultGenerantCity as faulteChargeableCityName,
+                case when MAINALARMSOLVEDATE is null then '否'
+                  when SHEETCOMPLETELIMIT is null then '否'
+                  when MAINALARMSOLVEDATE-SHEETCOMPLETELIMIT &gt; 0 then '是'
+                  else '否' end isoverTime,
+                '' as overTimeResion,
+                '' as problemResion,
+                '' as isConfirmResult,
+                '' as qcResult,
+                '' as qcDetail,              
+                nvl(central_getlast_faultreason(id),'其他') as faultType,
+								nvl(central_getlast_faultreasonid(id),'24') as faultTypeId,
+                '' as accessWay,
+                '' as enterpriseId,
+                '' as serviceId,
+                '' as isVolumeFault,
+                '' as terminalType,
+                '' as calledNumberCityName,
+                '' as ecsiType,
+                '' as accgateIp,
+                '' as accgateId,
+                '' as mpiagSendMegTime,
+                '' as isSusResponse,
+                '' as mpiagResReportTime,
+                '' as isSucResReport,
+                '' as apnName,
+                '' as tunnelType,
+                '' as vpnInstantiation,
+                '' as ceIp,
+                '' as customerIp,f_get_group_scopeservinf(id) ScopeServInf
+      from centralcommonfault_main m 
+      where (m.endTime&gt;=to_date('@beginTime@','YYYY-MM-DD HH24:MI:SS') and 
+					m.endTime&lt;=to_date('@endTime@','YYYY-MM-DD HH24:MI:SS')
+        and m.mainnetsorttwo = '10101041501'  
+        and m.deleted = '0' and m.status in (0,1)
+        and m.mainlinetype in(101031108,101031109)
+        and m.mainisreported = '是') or sheetid in(
+        
+       select sheetid from groupsheet_shield where sdate >= trunc(sysdate-1)
+ )
+		</sql>
+		<chargeName>周霞</chargeName>
+		<chargePhone>13960706199</chargePhone>
+		<!-- 时间格式 -->
+		<dateFormate>alarmStartTime,orderStartTime,limitTime,orderEndTime,contactCustomerFirstTime,
+			pretreatmentTime,taskTransferTime,maintenanceStartTime,arriveSceneTime,removeAlarmTime,recoFaultTime,
+			mpiagSendMegTime,mpiagResReportTime</dateFormate>
+		<!-- 需要转换字典 -->
+		<dictName>customerLev,customerType0,busType0,assuranceLev0,maintenanceCompany,
+			assuranceLevId0,faultResult</dictName>
+		<!-- 处理环节，质检环节，归档环节，用于判断工单状态并对应集团编码 -->
+		<processLink>FirstExcuteHumTask,SecondExcuteHumTask,ThirdExcuteHumTask</processLink>
+		<qualityChecking>ExamineHumTask</qualityChecking>
+		<holdTask>HoldHumTask</holdTask>
+		
+	</FJ>
+
+	<!-- 字典对应表 -->
+	<dict id="customerLev" name="客户等级">
+			<item id="101031201" name="金"/>	
+			<item id="101031202" name="银"/>
+			<item id="101031203" name="铜"/>
+			<item id="101031204" name="标准"/>
+			<item id="101031205" name="其他"/>
+			<item id=" " name="标准"/>
+	</dict>
+	<dict id="customerType" name="客户类别">
+			<item id="1" name="党政军"/>	
+			<item id="2" name="金融"/>
+			<item id="3" name="教育"/>
+			<item id="4" name="工业和能源"/>
+			<item id="5" name="医疗"/>
+			<item id="6" name="互联网"/>
+			<item id="7" name="农商"/>
+			<item id="8" name="其他"/>
+	</dict>
+	<dict id="busType" name="业务类型">
+			<item id="101031001" name="数据专线"/>	
+			<item id="101031002" name="互联网专线"/>
+			<item id="101031003" name="语音专线"/>
+			<item id="101031004" name="短彩信"/>
+			<item id="101031005" name="短彩信"/>
+			<item id="101031006" name="互联网专线"/>
+			<item id="101031007" name="互联网专线"/>
+			<item id="101031008" name="互联网专线"/>
+			<item id="101031009" name="互联网专线"/>
+			<item id="101031010" name="互联网专线"/>
+			<item id="101031011" name="互联网专线"/>
+			<item id="101031012" name="互联网专线"/>
+			<item id="101031013" name="数据专线"/>
+			<item id="101031014" name="MPLS VPN"/>
+			<item id=" " name="互联网专线"/>
+	</dict>
+	<dict id="assuranceLev" name="业务保障等级">
+			<item id="101031301" name="AAA"/>	
+			<item id="101031303" name="AA"/>
+			<item id="101031304" name="A"/>
+			<item id="101031305" name="普通"/>
+	</dict>
+	<dict id="assuranceLevId" name="业务保障等级编码">
+			<item id="101031301" name="1"/>	
+			<item id="101031303" name="2"/>
+			<item id="101031304" name="3"/>
+			<item id="101031305" name="4"/>
+	</dict>
+	<dict id="alarmEquipmentCompany" name="设备厂家">
+			<item id="101010301" name="ABB"/>	
+			<item id="101010302" name="GNB"/>
+			<item id="101010303" name="诺基亚"/>
+			<item id="101010304" name="西门子"/>
+			<item id="101010305" name="中兴"/>
+			<item id="101010306" name="贝尔"/>
+			<item id="101010307" name="华为"/>
+			<item id="101010308" name="艾默生"/>
+			<item id="101010309" name="其他厂家"/>
+			<item id="101010310" name="99"/>
+			<item id="101010311" name="普天"/>
+			<item id="101010312" name="合肥天馈"/>
+			<item id="101010313" name="神州泰岳"/>
+			<item id="101010314" name="嘉讯"/>
+			<item id="101010315" name="爱克赛"/>
+			<item id="101010316" name="光迅"/>
+			<item id="101010317" name="爱知"/>
+			<item id="101010318" name="春兰"/>
+			<item id="101010319" name="大金"/>
+			<item id="101010320" name="戴尔"/>
+			<item id="101010301" name="ABB"/>	
+			<item id="101010302" name="GNB"/>
+			<item id="101010303" name="诺基亚"/>
+			<item id="101010304" name="西门子"/>
+			<item id="101010305" name="中兴"/>
+			<item id="101010306" name="贝尔"/>
+			<item id="101010307" name="华为"/>
+			<item id="101010308" name="艾默生"/>
+			<item id="101010309" name="其他厂家"/>
+			<item id="101010310" name="99"/>
+			<item id="101010311" name="普天"/>
+			<item id="101010312" name="合肥天馈"/>
+			<item id="101010313" name="神州泰岳"/>
+			<item id="101010314" name="嘉讯"/>
+			<item id="101010315" name="爱克赛"/>
+			<item id="101010316" name="光迅"/>
+			<item id="101010317" name="爱知"/>
+			<item id="101010318" name="春兰"/>
+			<item id="101010319" name="大金"/>
+			<item id="101010320" name="戴尔"/>
+	</dict>
+	<dict id="faultResult" name="处理结果">
+			<item id="101030601" name="解决"/>	
+			<item id="101030602" name="解决"/>
+			<item id="101030603" name="解决"/>
+			<item id="101030604" name="未解决"/>
+	</dict>
+	<dict id="orderState" name="工单状态">
+			<item id="1" name="草稿"/>	
+			<item id="2" name="待处理"/>
+			<item id="3" name="处理中"/>
+			<item id="4" name="质检中"/>
+			<item id="5" name="待归档"/>
+			<item id="6" name="已归档"/>
+			<item id="7" name="其他"/>
+	</dict>
+	<dict id="isContactCustomer" name="是否联系客户">
+			<item id="101105001" name="是"/>	
+			<item id="101105002" name="否"/>
+	</dict>
+	<dict id="issueEliminatReason" name="问题原因">
+			<item id="101060917" name="网络原因"/>	
+			<item id="101060918" name="非网络原因"/>
+			<item id="101060919" name="其它"/>
+	</dict>
+	<dict id="maintenanceCompany" name="代维厂家">
+			<item id="101030802" name="厦门"/>	
+			<item id="101030801" name="福州"/>
+			<item id="101030888" name="漳州"/>
+			<item id="101030889" name="省公司"/>
+	</dict>
+	<dict id="faultType" name="故障分类">
+			<item id="10101040101" name="GSM无线网"/>	
+			<item id="10101040102" name="TD无线网"/>
+			<item id="10101040103" name="其他"/>
+			<item id="10101040104" name="性能"/>
+			<item id="10101040105" name="维护"/>
+			<item id="10101040106" name="LTE无线网"/>
+	</dict>
+	<dict id="accessWay" name="接入类型">
+			<item id="101100501" name="互联网"/>	
+			<item id="101100502" name="专线"/>
+	</dict>
+	<dict id="isVolumeFault" name="是否批量故障">
+			<item id="1030101" name="是"/>	
+			<item id="1030102" name="否"/>
+	</dict>
+</boco>
